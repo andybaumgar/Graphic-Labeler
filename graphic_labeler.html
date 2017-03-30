@@ -18,6 +18,10 @@ line{
   stroke:#414042;
   stroke-width:3px;
 }
+circle{
+  fill:#FECF8D;
+  r:15;
+}
 
 </style>
 <body>
@@ -26,9 +30,10 @@ line{
 
 var width = self.frameElement ? 960 : innerWidth,
     height = self.frameElement ? 500 : innerHeight;
+var margin = 100;
 
 var data = d3.range(6).map(function(){ 
-  return {x:Math.random() * width, y:Math.random() * height }
+  return {x:Math.random() * (width-margin)+margin/2, y:Math.random() * (height-margin)+margin/2 }
 });
 
 // clone data to use for line generation
@@ -38,7 +43,7 @@ var lines = d3.range(3).map(function(){
   return {p1:data2.pop(),p2:data2.pop()}
 });
 
-var color = d3.scale.category10();
+// var color = d3.scale.category10();
 
 var drag = d3.behavior.drag()
     .origin(function(d) { return {x: d.x, y: d.y}; })
@@ -60,14 +65,13 @@ var lines = svg
     .attr("y1", function(d) { return d.p1.y})
     .attr("x2", function(d) { return d.p2.x})
     .attr("y2", function(d) { return d.p2.y})
-    
+
 var circles = svg
   .selectAll("circle")
     .data(data)
   .enter().append("circle")
     .attr("transform", function(d) { return "translate(" + d.x+","+d.y + ")"; })
-    .attr("r", 32)
-    .style("fill", function(d, i) { return color(i); })
+    // .style("fill", function(d, i) { return color(i); })
     .on("click", clicked)
     .call(drag);
 
