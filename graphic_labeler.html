@@ -14,13 +14,18 @@ svg {
   position: absolute;
 }
 
-line{
+path{
   stroke:#414042;
   stroke-width:3px;
+  fill:none;
 }
 circle{
-  fill:#FECF8D;
+  fill:rgba(254, 207, 141, 0.5);
   r:15;
+}
+
+circle.driver{
+  fill:black;
 }
 
 </style>
@@ -28,22 +33,82 @@ circle{
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script>
 
+// TODO: refactor in type script
+// TODO: add editable? text fields
+// TODO: add methods for creating points
+// TODO: add method for saving configuration
+// TODO: add controls for settings
+// TODO: figure out how to export and import things
+
+
+var square = function(x){return Math.pow(x,2);}
+var numberOfPoints = 3;
+
+class ConcentricSolver {
+  constructor(height, width) {
+    this.isX = true;
+  }
+
+  calculate(x1,y1,x2,y2,x0,y0) {
+    var radius = sqrt(square(x0-x1)+square(y0-y1));
+    var x2New = (sqrt(square(radius)-square(y2)));
+    return {x2New};
+  }
+}
+
+var calculate = function(x1,y1,x2,y2,x0,y0) {
+    var radius = Math.sqrt(square(x0-x1)+square(y0-y1));
+    var x2New = (Math.sqrt(square(radius)-square(y2)));
+    return {x2:x2New, radius:radius};
+  };
+
+var centerX = 0;
+var centerY = 0;
+
 var width = self.frameElement ? 960 : innerWidth,
     height = self.frameElement ? 500 : innerHeight;
 var margin = 100;
 
-var data = d3.range(6).map(function(){ 
-  return {x:Math.random() * (width-margin)+margin/2, y:Math.random() * (height-margin)+margin/2 }
-});
+// var data = d3.range(2*numberOfPoints).map(function(index){ 
+//   return {x:Math.random() * (width-margin)+margin/2, y:Math.random() * (height-margin)+margin/2, index:index}
+// });
+
+data =[{"x":399.85263706136266,"y":195.52172065212034,"index":0},{"x":250.45545923505915,"y":367.94420439931815,"index":1},{"x":582.118973046221,"y":347.6207367620966,"index":2},{"x":493.90529168943084,"y":464.4999873504713,"index":3},{"x":472.76775712409204,"y":282.90334423451833,"index":4},{"x":215.73508125040803,"y":506.953675470549,"index":5}];
 
 // clone data to use for line generation
 var data2 = data.slice();
 
-var lines = d3.range(3).map(function(){
+lines = d3.range(numberOfPoints).map(function(){
   return {p1:data2.pop(),p2:data2.pop()}
 });
 
+var getLine = function(index){
+  for (var x = 0; x < lines.length; x++) {
+    if(lines[x].p1.index == index || lines[x].p2.index == index){return lines[x];}
+  }
+  return null;
+};
+
+var getSibling = function(index){
+  var line = getLine(index);
+  if(line.p1.index!=index){return line.p1.index;}
+  else{return line.p2.index;}
+}
+
+var getPoint = function(index){
+  for (var x = 0; x < data.length; x++) {
+    if(data[x].index == index){return data[x];}
+  }
+  return null;
+};
+
 // var color = d3.scale.category10();
+var drawArc = function(d){
+  var calculation = calculate(d.p1.x, d.p1.y, d.p2.x, d.p2.y, centerX, centerY);
+  d.p2.x = calculation.x2;
+  var radius = calculation.radius;
+  return 'M'+d.p1.x+','+d.p1.y+' A'+radius+','+radius+' 0 0,0 '+d.p2.x+','+d.p2.y;
+}
 
 var drag = d3.behavior.drag()
     .origin(function(d) { return {x: d.x, y: d.y}; })
@@ -57,14 +122,11 @@ var svg = body
     .attr("width", width)
     .attr("height", height)
 
-var lines = svg
-  .selectAll("line")
+var curves = svg
+  .selectAll("path")
     .data(lines)
-  .enter().append("line")
-    .attr("x1", function(d) { return d.p1.x})
-    .attr("y1", function(d) { return d.p1.y})
-    .attr("x2", function(d) { return d.p2.x})
-    .attr("y2", function(d) { return d.p2.y})
+  .enter().append("path")
+    .attr("d", drawArc)
 
 var circles = svg
   .selectAll("circle")
@@ -72,6 +134,11 @@ var circles = svg
   .enter().append("circle")
     .attr("transform", function(d) { return "translate(" + d.x+","+d.y + ")"; })
     // .style("fill", function(d, i) { return color(i); })
+    .attr("class", function(d){
+      if(d.index % 2 == 0){return "driven";}
+      else{return "driver";}
+    })
+    .attr("data-id", function(d){return d.index;})
     .on("click", clicked)
     .call(drag);
 
@@ -94,11 +161,15 @@ function dragged(d) {
   d.x = d3.event.x, d.y = d3.event.y;
   if (this.nextSibling) this.parentNode.appendChild(this);
   d3.select(this).attr("transform", "translate(" + d.x+","+d.y + ")");
-  lines
-    .attr("x1", function(d) { return d.p1.x})
-    .attr("y1", function(d) { return d.p1.y})
-    .attr("x2", function(d) { return d.p2.x})
-    .attr("y2", function(d) { return d.p2.y});
+  var siblingId = getSibling(d.index);
+  var siblingData = getPoint(siblingId);
+  d3.select('*[data-id="'+siblingId+'"]').attr("transform", "translate(" + siblingData.x+","+siblingData.y + ")");
+  curves
+    .attr("d", drawArc);
+  d3.select(this).attr("transform", "translate(" + d.x+","+d.y + ")");
 }
+
+// remove console.log
+// \s*console\.log(.*);
 
 </script>
